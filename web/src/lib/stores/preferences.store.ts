@@ -149,3 +149,6 @@ export const autoPlayVideo = persisted<boolean>('auto-play-video', true, {});
 export const alwaysLoadOriginalVideo = persisted<boolean>('always-load-original-video', false, {});
 
 export const recentAlbumsDropdown = persisted<boolean>('recent-albums-open', true, {});
+
+import type { DuplicateSelectionRule } from '$lib/utils/duplicate-utils';
+export const savedDuplicateRules = persisted<DuplicateSelectionRule[] | null>('duplicate-rules', null, {});

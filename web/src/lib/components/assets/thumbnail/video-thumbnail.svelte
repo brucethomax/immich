@@ -28,6 +28,7 @@
     class: className = undefined,
   }: Props = $props();
 
+  // svelte-ignore state_referenced_locally
   let remainingSeconds = $state(durationInSeconds);
   let loading = $state(true);
   let error = $state(false);

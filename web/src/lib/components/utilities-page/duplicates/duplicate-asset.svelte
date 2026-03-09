@@ -2,6 +2,7 @@
   import { locale } from '$lib/stores/preferences.store';
   import { getAssetMediaUrl } from '$lib/utils';
   import { getAssetResolution, getFileSize } from '$lib/utils/asset-utils';
+  import { type DuplicateSelectionRule, evaluateAssetRules } from '$lib/utils/duplicate-utils';
   import { getAltText } from '$lib/utils/thumbnail-util';
   import { fromISODateTime, fromISODateTimeUTC, toTimelineAsset } from '$lib/utils/timeline-util';
   import { type AssetResponseDto, getAllAlbums } from '@immich/sdk';
@@ -9,6 +10,8 @@
   import {
     mdiBookmarkOutline,
     mdiCalendar,
+    mdiCamera,
+    mdiCameraIris,
     mdiClock,
     mdiFile,
     mdiFitToScreen,
@@ -26,16 +29,34 @@
     assets: AssetResponseDto[];
     asset: AssetResponseDto;
     isSelected: boolean;
+    rules?: DuplicateSelectionRule[];
     onSelectAsset: (asset: AssetResponseDto) => void;
     onViewAsset: (asset: AssetResponseDto) => void;
   }
 
-  let { assets, asset, isSelected, onSelectAsset, onViewAsset }: Props = $props();
+  let { assets, asset, isSelected, rules, onSelectAsset, onViewAsset }: Props = $props();
 
   let isFromExternalLibrary = $derived(!!asset.libraryId);
   let assetData = $derived(JSON.stringify(asset, null, 2));
 
+  let ruleResults = $derived(evaluateAssetRules(asset, assets, rules));
+
   let locationParts = $derived([asset.exifInfo?.city, asset.exifInfo?.state, asset.exifInfo?.country].filter(Boolean));
+
+  let cameraMakeModel = $derived(
+    [asset.exifInfo?.make, asset.exifInfo?.model].filter(Boolean).join(' ') || undefined,
+  );
+
+  let lensModel = $derived(asset.exifInfo?.lensModel ?? undefined);
+
+  let exposureParts = $derived(
+    [
+      asset.exifInfo?.focalLength ? `${asset.exifInfo.focalLength}mm` : undefined,
+      asset.exifInfo?.fNumber ? `ƒ/${asset.exifInfo.fNumber}` : undefined,
+      asset.exifInfo?.exposureTime ? `${asset.exifInfo.exposureTime}s` : undefined,
+      asset.exifInfo?.iso ? `ISO ${asset.exifInfo.iso}` : undefined,
+    ].filter(Boolean),
+  );
 
   let timeZone = $derived(asset.exifInfo?.timeZone);
   let dateTime = $derived(
@@ -79,6 +100,19 @@
     }),
     location: isDifferent(
       (a) => [a.exifInfo?.city, a.exifInfo?.state, a.exifInfo?.country].filter(Boolean).join(', ') || 'unknown',
+    ),
+    camera: isDifferent((a) => [a.exifInfo?.make, a.exifInfo?.model].filter(Boolean).join(' ') || 'unknown'),
+    lens: isDifferent((a) => a.exifInfo?.lensModel ?? 'unknown'),
+    exposure: isDifferent(
+      (a) =>
+        [
+          a.exifInfo?.focalLength ? `${a.exifInfo.focalLength}mm` : undefined,
+          a.exifInfo?.fNumber ? `ƒ/${a.exifInfo.fNumber}` : undefined,
+          a.exifInfo?.exposureTime ? `${a.exifInfo.exposureTime}s` : undefined,
+          a.exifInfo?.iso ? `ISO ${a.exifInfo.iso}` : undefined,
+        ]
+          .filter(Boolean)
+          .join(', ') || 'unknown',
     ),
   });
 
@@ -171,6 +205,7 @@
     <InfoRow
       icon={mdiImageOutline}
       highlight={hasDifferentValues.fileName}
+      rulePass={ruleResults['filename-length'] ?? ruleResults['filename-alpha']}
       title={$t('file_name_with_value', { values: { file_name: asset.originalFileName ?? '' } })}
     >
       {asset.originalFileName}
@@ -184,15 +219,15 @@
       {truncateMiddle(getBasePath(asset.originalPath, asset.originalFileName)) || $t('unknown')}
     </InfoRow>
 
-    <InfoRow icon={mdiFile} highlight={hasDifferentValues.fileSize} title={$t('file_size')}>
+    <InfoRow icon={mdiFile} highlight={hasDifferentValues.fileSize} rulePass={ruleResults['file-size']} title={$t('file_size')}>
       {getFileSize(asset)}
     </InfoRow>
 
-    <InfoRow icon={mdiFitToScreen} highlight={hasDifferentValues.resolution} title={$t('resolution')}>
+    <InfoRow icon={mdiFitToScreen} highlight={hasDifferentValues.resolution} rulePass={ruleResults['image-resolution']} title={$t('resolution')}>
       {getAssetResolution(asset)}
     </InfoRow>
 
-    <InfoRow icon={mdiCalendar} highlight={hasDifferentValues.date} title={$t('date')}>
+    <InfoRow icon={mdiCalendar} highlight={hasDifferentValues.date} rulePass={ruleResults['date-original']} title={$t('date')}>
       {#if dateTime}
         {dateTime.toLocaleString(
           {
@@ -223,13 +258,27 @@
       {/if}
     </InfoRow>
 
-    <InfoRow icon={mdiMapMarkerOutline} highlight={hasDifferentValues.location} title={$t('location')}>
+    <InfoRow icon={mdiMapMarkerOutline} highlight={hasDifferentValues.location} rulePass={ruleResults['has-location']} title={$t('location')}>
       {#if locationParts.length > 0}
         {locationParts.join(', ')}
       {:else}
         {$t('unknown')}
       {/if}
     </InfoRow>
+
+    <InfoRow icon={mdiCamera} highlight={hasDifferentValues.camera} title={$t('camera')}>
+      {cameraMakeModel ?? $t('unknown')}
+    </InfoRow>
+
+    <InfoRow icon={mdiCameraIris} highlight={hasDifferentValues.lens} title={$t('lens_model')}>
+      {lensModel ?? $t('unknown')}
+    </InfoRow>
+
+    {#if exposureParts.length > 0}
+      <InfoRow icon={mdiCameraIris} highlight={hasDifferentValues.exposure} rulePass={ruleResults['exif-precision']} title={$t('details')}>
+        {exposureParts.join(', ')}
+      </InfoRow>
+    {/if}
 
     <InfoRow icon={mdiBookmarkOutline} borderBottom={false} title={$t('albums')}>
       {#await getAllAlbums({ assetId: asset.id })}

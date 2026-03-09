@@ -6,38 +6,27 @@
   import { assetViewingStore } from '$lib/stores/asset-viewing.store';
   import { handlePromiseError } from '$lib/utils';
   import { getNextAsset, getPreviousAsset } from '$lib/utils/asset-utils';
-  import { suggestDuplicate } from '$lib/utils/duplicate-utils';
+  import type { DuplicateSelectionRule } from '$lib/utils/duplicate-utils';
   import { navigate } from '$lib/utils/navigation';
   import { getAssetInfo, type AssetResponseDto } from '@immich/sdk';
   import { Button } from '@immich/ui';
   import { mdiCheck, mdiImageMultipleOutline, mdiTrashCanOutline } from '@mdi/js';
-  import { onDestroy, onMount } from 'svelte';
+  import { onDestroy } from 'svelte';
   import { t } from 'svelte-i18n';
-  import { SvelteSet } from 'svelte/reactivity';
+  import { type SvelteSet } from 'svelte/reactivity';
 
   interface Props {
     assets: AssetResponseDto[];
+    selectedAssetIds: SvelteSet<string>;
+    rules?: DuplicateSelectionRule[];
     onResolve: (duplicateAssetIds: string[], trashIds: string[]) => void;
     onStack: (assets: AssetResponseDto[]) => void;
   }
 
-  let { assets, onResolve, onStack }: Props = $props();
+  let { assets, selectedAssetIds, rules, onResolve, onStack }: Props = $props();
   const { isViewing: showAssetViewer, asset: viewingAsset, setAsset } = assetViewingStore;
 
-  // eslint-disable-next-line svelte/no-unnecessary-state-wrap
-  let selectedAssetIds = $state(new SvelteSet<string>());
   let trashCount = $derived(assets.length - selectedAssetIds.size);
-
-  onMount(() => {
-    const suggestedAsset = suggestDuplicate(assets);
-
-    if (!suggestedAsset) {
-      selectedAssetIds = new SvelteSet(assets[0].id);
-      return;
-    }
-
-    selectedAssetIds.add(suggestedAsset.id);
-  });
 
   onDestroy(() => {
     assetViewingStore.showAssetViewer(false);
@@ -66,7 +55,10 @@
   };
 
   const onSelectAll = () => {
-    selectedAssetIds = new SvelteSet(assets.map((asset) => asset.id));
+    selectedAssetIds.clear();
+    for (const asset of assets) {
+      selectedAssetIds.add(asset.id);
+    }
   };
 
   const onViewAsset = async ({ id }: AssetResponseDto) => {
@@ -160,7 +152,7 @@
   <div class="overflow-x-auto p-2">
     <div class="flex flex-nowrap gap-1 place-items-start justify-center min-w-full w-fit mx-auto">
       {#each assets as asset (asset.id)}
-        <DuplicateAsset {assets} {asset} {onSelectAsset} isSelected={selectedAssetIds.has(asset.id)} {onViewAsset} />
+        <DuplicateAsset {assets} {asset} {rules} {onSelectAsset} isSelected={selectedAssetIds.has(asset.id)} {onViewAsset} />
       {/each}
     </div>
   </div>

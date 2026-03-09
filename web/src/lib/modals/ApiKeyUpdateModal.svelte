@@ -20,7 +20,9 @@
       ? Object.values(Permission).filter((permission) => permission !== Permission.All)
       : permissions;
 
+  // svelte-ignore state_referenced_locally
   let name = $state(apiKey.name);
+  // svelte-ignore state_referenced_locally
   let selectedPermissions = $state<Permission[]>(mapPermissions(apiKey.permissions));
 
   const onSubmit = async () => {

@@ -131,8 +131,9 @@
     }
   });
 
-  const setFocusTo = setFocusToInit.bind(undefined, scrollToAsset, timelineManager);
-  const setFocusAsset = setFocusAssetInit.bind(undefined, scrollToAsset);
+  const setFocusTo = (direction: 'earlier' | 'later', interval: 'day' | 'month' | 'year' | 'asset') =>
+    setFocusToInit(scrollToAsset, timelineManager, direction, interval);
+  const setFocusAsset = (asset: TimelineAsset) => setFocusAssetInit(scrollToAsset, asset);
 
   const handleOpenDateModal = async () => {
     const asset = await modalManager.show(NavigateToDateModal, { timelineManager });
