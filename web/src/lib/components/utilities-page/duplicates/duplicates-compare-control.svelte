@@ -97,7 +97,7 @@
   ]}
 />
 
-<div class="rounded-3xl border dark:border-2 border-gray-300 dark:border-gray-700 max-w-256 mx-auto mb-4 py-6 px-0.2">
+<div class="rounded-3xl border dark:border-2 border-gray-300 dark:border-gray-700 w-full mx-auto mb-4 py-6 px-0.2">
   <div class="flex flex-wrap gap-y-6 mb-4 px-6 w-full place-content-end justify-between">
     <!-- MARK ALL BUTTONS -->
     <div class="flex text-xs text-black">
@@ -149,11 +149,13 @@
     </div>
   </div>
 
-  <div class="overflow-x-auto p-2">
-    <div class="flex flex-nowrap gap-1 place-items-start justify-center min-w-full w-fit mx-auto">
-      {#each assets as asset (asset.id)}
-        <DuplicateAsset {assets} {asset} {rules} {onSelectAsset} isSelected={selectedAssetIds.has(asset.id)} {onViewAsset} />
-      {/each}
+  <div class="overflow-x-auto p-2 w-full">
+    <div class="w-max mx-auto">
+      <div class="flex flex-nowrap gap-1 place-items-start justify-center">
+        {#each [...assets].sort((a, b) => (b.exifInfo?.fileSizeInByte ?? 0) - (a.exifInfo?.fileSizeInByte ?? 0) ) as asset (asset.id)}
+          <DuplicateAsset {assets} {asset} {rules} {onSelectAsset} isSelected={selectedAssetIds.has(asset.id)} {onViewAsset} />
+        {/each}
+      </div>
     </div>
   </div>
 </div>

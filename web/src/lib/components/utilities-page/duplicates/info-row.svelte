@@ -6,6 +6,7 @@
   interface Props {
     icon: string;
     children?: Snippet;
+    rawContent?: Snippet;
     borderBottom?: boolean;
     highlight?: boolean;
     title?: string;
@@ -13,7 +14,7 @@
     rulePass?: boolean;
   }
 
-  let { icon, children, borderBottom = true, highlight = false, title, rulePass }: Props = $props();
+  let { icon, children, rawContent, borderBottom = true, highlight = false, title, rulePass }: Props = $props();
 </script>
 
 <div class="grid grid-cols-[25px_1fr] w-full px-1 py-0.5" class:border-b={borderBottom} {title}>
@@ -26,12 +27,18 @@
     {/if}
   </div>
   <div class="justify-self-end text-end rounded px-1 transition-colors w-full overflow-hidden">
-    <Text
-      size="tiny"
-      fontWeight={highlight ? 'semi-bold' : 'normal'}
-      class={`${highlight ? 'text-primary' : ''} text-ellipsis w-full overflow-hidden`}
-    >
-      {@render children?.()}
-    </Text>
+    {#if rawContent}
+      <span class="text-xs {highlight ? 'text-primary' : ''} text-ellipsis overflow-hidden">
+        {@render rawContent()}
+      </span>
+    {:else}
+      <Text
+        size="tiny"
+        fontWeight={highlight ? 'semi-bold' : 'normal'}
+        class={`${highlight ? 'text-primary' : ''} text-ellipsis w-full overflow-hidden`}
+      >
+        {@render children?.()}
+      </Text>
+    {/if}
   </div>
 </div>

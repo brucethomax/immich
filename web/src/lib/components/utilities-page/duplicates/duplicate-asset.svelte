@@ -133,6 +133,49 @@
 
     return path.slice(0, Math.max(0, start)) + '...' + path.slice(Math.max(0, path.length - end));
   }
+
+  function getFileNameSegments(fileName: string, allNames: string[]): { text: string; bold: boolean }[] {
+    if (!fileName || allNames.length < 2) {
+      return [{ text: fileName, bold: false }];
+    }
+    const minLen = Math.min(...allNames.map((n) => n.length));
+
+    // Bold the common prefix (scan forward)
+    let prefix = '';
+    for (let i = 0; i < minLen; i++) {
+      const char = allNames[0][i];
+      if (allNames.every((n) => n[i] === char)) {
+        prefix += char;
+      } else {
+        break;
+      }
+    }
+
+    // Bold the common suffix (scan backward), but never overlap the prefix
+    let suffix = '';
+    const maxSuffixLen = minLen - prefix.length;
+    for (let i = 1; i <= maxSuffixLen; i++) {
+      const char = allNames[0][allNames[0].length - i];
+      if (allNames.every((n) => n[n.length - i] === char)) {
+        suffix = char + suffix;
+      } else {
+        break;
+      }
+    }
+
+    const mid = fileName.slice(prefix.length, suffix.length > 0 ? fileName.length - suffix.length : undefined);
+    const segments: { text: string; bold: boolean }[] = [];
+    if (prefix.length > 0) {
+      segments.push({ text: prefix, bold: false });
+    }
+    if (mid.length > 0) {
+      segments.push({ text: mid, bold: true });
+    }
+    if (suffix.length > 0) {
+      segments.push({ text: suffix, bold: false });
+    }
+    return segments;
+  }
 </script>
 
 <div class="min-w-60 transition-colors border rounded-lg flex-1">
@@ -208,7 +251,11 @@
       rulePass={ruleResults['filename-length'] ?? ruleResults['filename-alpha']}
       title={$t('file_name_with_value', { values: { file_name: asset.originalFileName ?? '' } })}
     >
-      {asset.originalFileName}
+      {#snippet rawContent()}
+        {#each getFileNameSegments(asset.originalFileName, assets.map(a => a.originalFileName)) as seg, i (i)}
+          {#if seg.bold}<b class="text-sm">{seg.text}</b>{:else}{seg.text}{/if}
+        {/each}
+      {/snippet}
     </InfoRow>
 
     <InfoRow

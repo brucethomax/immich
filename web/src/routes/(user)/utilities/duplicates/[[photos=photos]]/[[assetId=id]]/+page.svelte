@@ -498,6 +498,7 @@
   };
 
   const navigateToNextGroup = async () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     if (duplicates.length === 0) {
       return goto(Route.duplicatesUtility({ sortBy }));
     }
