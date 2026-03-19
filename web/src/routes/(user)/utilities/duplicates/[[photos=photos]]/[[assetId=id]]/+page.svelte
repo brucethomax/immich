@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { goto } from '$app/navigation';
+  import { afterNavigate, goto } from '$app/navigation';
   import { page } from '$app/state';
   import { shortcuts } from '$lib/actions/shortcut';
   import UserPageLayout from '$lib/components/layouts/user-page-layout.svelte';
@@ -46,6 +46,12 @@
   }
 
   let { data = $bindable() }: Props = $props();
+
+  let compareScrollDiv: HTMLElement | undefined;
+
+  afterNavigate(() => {
+    compareScrollDiv?.scrollTo({ top: 0, behavior: 'instant' });
+  });
 
   interface Shortcuts {
     general: ExplainedShortcut[];
@@ -498,7 +504,6 @@
   };
 
   const navigateToNextGroup = async () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
     if (duplicates.length === 0) {
       return goto(Route.duplicatesUtility({ sortBy }));
     }
@@ -713,7 +718,7 @@
         </div>
 
         <!-- Main content: compare view -->
-        <div class="flex-1 overflow-y-auto">
+        <div class="flex-1 overflow-y-auto" bind:this={compareScrollDiv}>
           {#if selectedGroup}
           {#key selectedGroup.duplicateId}
             <DuplicatesCompareControl

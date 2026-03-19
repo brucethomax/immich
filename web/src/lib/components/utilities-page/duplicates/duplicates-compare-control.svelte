@@ -9,11 +9,26 @@
   import type { DuplicateSelectionRule } from '$lib/utils/duplicate-utils';
   import { navigate } from '$lib/utils/navigation';
   import { getAssetInfo, type AssetResponseDto } from '@immich/sdk';
-  import { Button } from '@immich/ui';
-  import { mdiCheck, mdiImageMultipleOutline, mdiTrashCanOutline } from '@mdi/js';
+  import { Button, Icon } from '@immich/ui';
+  import {
+    mdiCheck,
+    mdiImageMultipleOutline,
+    mdiSortAscending,
+    mdiSortDescending,
+    mdiTrashCanOutline,
+  } from '@mdi/js';
   import { onDestroy } from 'svelte';
   import { t } from 'svelte-i18n';
   import { type SvelteSet } from 'svelte/reactivity';
+
+  type CompareSortField = 'filename' | 'size' | 'localDateTime';
+  type CompareSortDir = 'asc' | 'desc';
+
+  const sortFieldLabels: Record<CompareSortField, string> = {
+    filename: 'Filename',
+    size: 'Size',
+    localDateTime: 'Date/Time',
+  };
 
   interface Props {
     assets: AssetResponseDto[];
@@ -24,6 +39,23 @@
   }
 
   let { assets, selectedAssetIds, rules, onResolve, onStack }: Props = $props();
+
+  let compareSort = $state<CompareSortField>('size');
+  let compareSortDir = $state<CompareSortDir>('desc');
+
+  let sortedAssets = $derived(
+    [...assets].sort((a, b) => {
+      let cmp = 0;
+      if (compareSort === 'filename') {
+        cmp = (a.originalFileName ?? '').localeCompare(b.originalFileName ?? '');
+      } else if (compareSort === 'size') {
+        cmp = (a.exifInfo?.fileSizeInByte ?? 0) - (b.exifInfo?.fileSizeInByte ?? 0);
+      } else if (compareSort === 'localDateTime') {
+        cmp = new Date(a.localDateTime).getTime() - new Date(b.localDateTime).getTime();
+      }
+      return compareSortDir === 'asc' ? cmp : -cmp;
+    }),
+  );
   const { isViewing: showAssetViewer, asset: viewingAsset, setAsset } = assetViewingStore;
 
   let trashCount = $derived(assets.length - selectedAssetIds.size);
@@ -113,6 +145,26 @@
       >
     </div>
 
+    <!-- SORT CONTROLS -->
+    <div class="flex items-center gap-1">
+      <select
+        class="text-xs rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-2 py-1 cursor-pointer"
+        bind:value={compareSort}
+      >
+        {#each Object.entries(sortFieldLabels) as [value, label] (value)}
+          <option {value}>{label}</option>
+        {/each}
+      </select>
+      <button
+        type="button"
+        class="p-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+        title={compareSortDir === 'asc' ? 'Ascending' : 'Descending'}
+        onclick={() => (compareSortDir = compareSortDir === 'asc' ? 'desc' : 'asc')}
+      >
+        <Icon icon={compareSortDir === 'asc' ? mdiSortAscending : mdiSortDescending} size="18" />
+      </button>
+    </div>
+
     <!-- CONFIRM BUTTONS -->
     <div class="flex text-xs text-black">
       {#if trashCount === 0}
@@ -152,7 +204,7 @@
   <div class="overflow-x-auto p-2 w-full">
     <div class="w-max mx-auto">
       <div class="flex flex-nowrap gap-1 place-items-start justify-center">
-        {#each [...assets].sort((a, b) => (b.exifInfo?.fileSizeInByte ?? 0) - (a.exifInfo?.fileSizeInByte ?? 0) ) as asset (asset.id)}
+        {#each sortedAssets as asset (asset.id)}
           <DuplicateAsset {assets} {asset} {rules} {onSelectAsset} isSelected={selectedAssetIds.has(asset.id)} {onViewAsset} />
         {/each}
       </div>
